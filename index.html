@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SEMITONOS DTF JC - Professional RIP</title>
+    
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #0d0d0f;
+            --bg-panel: #1a1a1c;
+            --bg-card: #252528;
+            --accent: #ff3366;
+            --accent-hover: #ff4a77;
+            --success: #00e676;
+            --text-main: #ffffff;
+            --text-muted: #88888b;
+            --border: #333336;
+            --btn-import: #007aff;
+            --btn-import-hover: #0056b3;
+            --pro-gradient: linear-gradient(135deg, #7b2cbf, #9d4edd);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* ================= PANTALLA DE LOGIN ================= */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-main);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.5s;
+        }
+        .login-card {
+            background: var(--bg-panel); padding: 40px; border-radius: 12px;
+            border: 1px solid var(--border); width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+        }
+        .login-card h2 { font-weight: 800; margin-bottom: 5px; font-size: 24px; }
+        .login-card h2 span { color: var(--accent); }
+        .login-card p { color: #888; font-size: 13px; margin-bottom: 25px; }
+        .login-card input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            background: #0d0d0f; border: 1px solid var(--border);
+            border-radius: 6px; color: white; outline: none;
+        }
+        .login-card input:focus { border-color: var(--accent); }
+        .error-msg { color: var(--accent); font-size: 12px; margin-bottom: 15px; display: none; background: rgba(255, 51, 102, 0.1); padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 51, 102, 0.3); word-wrap: break-word;}
+        
+        #main-app { display: none; flex-direction: column; height: 100%; }
+
+        /* ================= HEADER ================= */
+        header { background-color: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .logo-container h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo-container h1 span { color: var(--accent); }
+        .logo-container p { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+
+        /* ================= BOTONES ================= */
+        .btn { border: none; padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
+        .btn-primary { background-color: #2b2b2b; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-primary:hover { background-color: #383838; }
+        
+        .btn-import-img { background-color: var(--btn-import); color: white; box-shadow: 0 0 15px rgba(0,122,255,0.4); border: 1px solid #3399ff; width: auto; }
+        .btn-import-img:hover { background-color: var(--btn-import-hover); box-shadow: 0 0 20px rgba(0,122,255,0.6); transform: translateY(-1px); }
+        
+        .btn-lang { background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); width: auto; padding: 6px 12px; font-size: 11px; }
+        .btn-lang:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        .btn-success { background-color: transparent; color: var(--success); border: 1px solid var(--success); }
+        .btn-success:hover { background-color: rgba(0, 230, 118, 0.1); box-shadow: 0 0 15px rgba(0, 230, 118, 0.2); }
+
+        .btn-download { background: linear-gradient(135deg, #ff9900, #ff5500); color: white; margin-top: auto; }
+        .btn-download:hover { box-shadow: 0 5px 15px rgba(255,85,0,0.4); transform: translateY(-1px); }
+        
+        .btn-logout { background: transparent; border: 1px solid #444; color: #888; width: auto; padding: 6px 12px; font-size: 11px; cursor: pointer; border-radius: 6px; transition: 0.2s;}
+        .btn-logout:hover { background: #333; color: white; }
+
+        .btn-accent { background-color: var(--accent); color: white; width: 100%; padding: 12px; font-size: 14px;}
+        .btn-accent:hover { background-color: var(--accent-hover); }
+
+        .btn-pro { background: var(--pro-gradient); color: white; border: none; }
+        .btn-pro:hover { box-shadow: 0 0 15px rgba(157, 78, 221, 0.4); transform: translateY(-1px); }
+
+        .btn-split { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); border-radius: 6px; padding: 4px 10px; font-size: 10px; cursor: pointer; transition: 0.2s; font-weight: 600; }
+        .btn-split:hover { border-color: var(--accent); color: white; }
+        .btn-split.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 51, 102, 0.4); }
+
+        /* ================= DUAL WORKSPACE ================= */
+        .app-container { display: flex; flex: 1; overflow: hidden; }
+        .workspace { flex: 1; background-color: #121212; display: flex; flex-direction: column; padding: 20px; }
+        .split-view { display: flex; gap: 20px; flex: 1; min-height: 0; }
+        .panel-view { flex: 1; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .panel-header { background: var(--bg-card); padding: 10px 15px; font-size: 12px; font-weight: 600; color: #ddd; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .panel-header span { color: var(--text-muted); font-size: 10px; font-weight: 400; }
+
+        .canvas-container-wrapper { 
+            flex: 1; display: flex; justify-content: center; align-items: center; 
+            background-color: #808080; 
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1)), linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1));
+            background-size: 20px 20px; background-position: 0 0, 10px 10px;
+            padding: 20px; overflow: hidden; 
+        }
+
+        .canvas-container { margin: 0 auto; max-width: 100% !important; max-height: 100% !important; }
+        .canvas-container canvas { max-width: 100% !important; max-height: 100% !important; object-fit: contain; }
+        .smart-fit { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .canvas-wrapper-inner { box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;}
+
+        /* ================= PANEL DE CONTROL ================= */
+        .control-panel { width: 340px; background-color: var(--bg-panel); border-left: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+        .card-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+
+        .slider-group { margin-bottom: 12px; }
+        .slider-group:last-child { margin-bottom: 0; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 11px; color: #ddd; margin-bottom: 6px; }
+        .slider-val { color: var(--accent); font-weight: 600; }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: #1a1a1c; height: 6px; border-radius: 3px; border: 1px solid #333; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; transition: 0.1s; border: 2px solid #fff; }
+        
+        select { background: #1a1a1c; color: white; border: 1px solid var(--border); padding: 8px; border-radius: 6px; width: 100%; font-size: 12px; cursor: pointer; outline: none; margin-bottom: 10px; font-family: 'Inter', sans-serif; }
+        select:focus { border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="login-card">
+            <h2>SEMITONOS <span>DTF JC</span></h2>
+            <p>Introduce tus credenciales de miembro para acceder al motor RIP.</p>
+            <div id="login-error" class="error-msg"></div>
+            <input type="email" id="user-email" placeholder="Correo electrónico">
+            <input type="password" id="user-pass" placeholder="Contraseña">
+            <button class="btn btn-accent" id="btn-login">ENTRAR AL PANEL</button>
+            <div style="margin-top: 20px; font-size: 10px; color: #555;">Soporte de Membresía: info@jcdtf.com</div>
+        </div>
+    </div>
+
+    <div id="nag-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13,13,15,0.95); z-index: 9998; justify-content: center; align-items: center; text-align: center;">
+        <div class="login-card" style="border-color: #ff9900; max-width: 450px;">
+            <h2 style="color: #ff9900;">PERIODO DE PRUEBA TERMINADO</h2>
+            <p style="margin-top: 10px;">Tu acceso ultra-rápido de 90 días ha concluido. Para apoyar el mantenimiento de la plataforma y exportar sin demoras, adquiere la versión PRO.</p>
+            <a href="https://payhip.com/jcdtf" target="_blank" class="btn btn-download" style="width: 100%; margin-bottom: 20px; text-decoration: none; padding: 15px; font-size: 15px; border-radius: 6px;">💎 ADQUIRIR VERSIÓN PRO ($50/año)</a>
+            <button id="btn-wait-download" class="btn btn-primary" disabled style="background: #222; color: #555;">Generando descarga en <span id="nag-timer">20</span>s...</button>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <header>
+            <div class="logo-container">
+                <h1>SEMITONOS <span>DTF JC</span></h1>
+                <p id="lblSubtitle">Professional DTF RIP Engine • 720 PPP NATIVO</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" id="btn-cerrar-sesion">🔒 Cerrar Sesión</button>
+                <button class="btn btn-lang" id="btnIdioma">🌐 EN / ES</button>
+                <button class="btn btn-import-img" id="btnSubir">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    <span id="lblBtnImport">IMPORTAR IMAGEN</span>
+                </button>
+                <input type="file" id="inputImagen" accept="image/png, image/jpeg" style="display: none;">
+            </div>
+        </header>
+
+        <div class="app-container">
+            <main class="workspace">
+                <div class="split-view">
+                    
+                    <div class="panel-view">
+                        <div class="panel-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div id="lblPanelLeft">ANTES (Original)</div>
+                                <button id="btnResetZoom" class="btn-split" style="display: none; border-color: #666;">🔄 CENTRAR</button>
+                                <button id="btnVerSplit" class="btn-split" style="display: none;">👁️ VER ORIGINAL</button>
+                            </div>
+                            <div style="text-align: right;">
+                                <span id="lblResLeft">Entrada RAW</span><br>
+                                <span style="font-size: 8px; color: #888; font-weight: normal; margin-top:2px; display:block;" id="lblZoomTip">🔍 Zoom: Rueda ratón | Mover: Alt+Clic</span>
+                            </div>
+                        </div>
+                        <div class="canvas-container-wrapper" id="wrapperOriginal">
+                            <div class="canvas-wrapper-inner">
+                                <canvas id="lienzoOriginal"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-view">
+                        <div class="panel-header">
+                            <div id="lblPanelRight" style="color: var(--success);">DESPUÉS (RIP Final)</div>
+                            <span id="lblResRight">Previsualización (Render 720 ppp)</span>
+                        </div>
+                        <div class="canvas-container-wrapper" id="wrapperRIP">
+                            <div style="color: #555; font-size: 12px; text-align: center;" id="placeholderRIP">
+                                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="opacity: 0.5; margin-bottom:10px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><br>
+                                <span id="lblAwaiting">Esperando Procesamiento...</span>
+                            </div>
+                            <img id="imgPreviewRIP" class="smart-fit" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <aside class="control-panel">
+                <div class="card" style="border: 1px solid #9d4edd;">
+                    <div class="card-title" style="color: #c77dff;" id="lblBgProTitle">✂️ HERRAMIENTAS PRO DTF</div>
+                    <div style="font-size: 10px; color: #aaa; margin-bottom: 8px;" id="lblMagicGotero">Quitar Color Selectivo (Chroma Key):</div>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <button class="btn btn-primary" id="btnGotero" style="flex: 1;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            <span id="lblBtnGotero">Activar Gotero</span>
+                        </button>
+                        <input type="color" id="colorMuestraGotero" value="#000000" style="width: 35px; height: 35px; border-radius: 6px; padding: 0; cursor: pointer; border: 1px solid var(--border);">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><label id="lblTolMagic">Tolerancia</label><span class="slider-val" id="valTolMagic">30</span></div>
+                        <input type="range" id="slTolMagic" min="0" max="150" value="30">
+                    </div>
+                    <button class="btn btn-primary" id="btnAplicarGotero" style="margin-top: 5px;">✨ <span id="lblBtnApplyMagic">Borrar Color Seleccionado</span></button>
+                    <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
+                    <div style="font-size: 10px; color: #aaa; margin-bottom: 8px;" id="lblHalosTitle">Corrección de Bordes (Eliminador de Halos):</div>
+                    <button class="btn btn-pro" id="btnHalos">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                        <span id="lblBtnHalos">Contraer Bordes (Choke 1px)</span>
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span id="lblPreprocess">Preprocesamiento RAW</span><span style="cursor:pointer; color: #888;" id="btnResetRAW" title="Restablecer">↺</span></div>
+                    <div class="slider-group">
+                        <div class="slider-header"><label id="lblBrightness">Brillo</label><span class="slider-val" id="valBrillo">0</span></div>
+                        <input type="range" id="slBrillo" min="-0.5" max="0.5" step="0.01" value="0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><label id="lblContrast">Contraste</label><span class="slider-val" id="valContraste">0</span></div>
+                        <input type="range" id="slContraste" min="-0.5" max="0.5" step="0.01" value="0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><label id="lblSat">Saturación</label><span class="slider-val" id="valSaturacion">0</span></div>
+                        <input type="range" id="slSaturacion" min="-1" max="1" step="0.01" value="0">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title" id="lblConfigTrama">Configuración de Trama</div>
+                    
+                    <label style="font-size: 10px; color: #aaa; margin-bottom: 5px; display: block;" id="lblLpi">Tamaño de Punto (LPI):</label>
+                    <select id="selectLPI">
+                        <option value="15" id="optLpi15">15 LPI (Puntos extra grandes)</option>
+                        <option value="25" id="optLpi25">25 LPI (Puntos grandes)</option>
+                        <option value="35" selected id="optLpi35">35 LPI (Trama Ideal JCDTF)</option>
+                        <option value="45" id="optLpi45">45 LPI (Puntos finos)</option>
+                        <option value="55" id="optLpi55">55 LPI (Puntos extra finos)</option>
+                    </select>
+                    
+                    <label style="font-size: 10px; color: #aaa; margin-bottom: 5px; display: block; margin-top: 10px;" id="lblKnockout">Modo de Transpiración (Knockout):</label>
+                    <select id="selectModoTrama" style="border-color: var(--accent); margin-bottom: 10px;">
+                        <option value="negra" selected id="optModoB">Para TELA NEGRA (Perfora Negros)</option>
+                        <option value="blanca" id="optModoW">Para TELA BLANCA (Perfora Blancos)</option>
+                        <option value="color" id="optModoC">Para TELA DE COLOR (Usa color del Gotero)</option>
+                    </select>
+
+                    <label style="font-size: 10px; color: #aaa; margin-bottom: 5px; display: block; margin-top: 10px;" id="lblSizeTitle">Ancho de Salida (Resolución 720 PPP):</label>
+                    <select id="selectTamano" style="border-color: #ff9900; margin-bottom: 5px;">
+                        <option value="10" id="optSize10">10 cm (Logos / Pecho)</option>
+                        <option value="15" id="optSize15">15 cm (Bolsillo / Infantil)</option>
+                        <option value="20" id="optSize20">20 cm (A4 / Mediano)</option>
+                        <option value="29" selected id="optSize29">29 cm (A3 / Estándar DTF)</option>
+                        <option value="35" id="optSize35">35 cm (A3+ / Grande)</option>
+                        <option value="40" id="optSize40">40 cm (Tabloide / Extra Grande)</option>
+                    </select>
+
+                    <button class="btn btn-success" id="btnSemitono" style="margin-top: 15px;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span id="lblBtnProcess">PROCESAR RIP 720 PPP</span>
+                    </button>
+                </div>
+                
+                <button class="btn btn-download" id="btnDescargar" disabled>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span id="lblBtnDownload">DESCARGAR PNG HD (29cm)</span>
+                </button>
+            </aside>
+        </div>
+    </div>
+
+    <script type="module">
+        // 🔒 FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1OytnKjSytwQYRIKCnrukw5wA9-D-F94",
+            authDomain: "semitonos-dtf-jc.firebaseapp.com",
+            databaseURL: "https://semitonos-dtf-jc-default-rtdb.firebaseio.com", 
+            projectId: "semitonos-dtf-jc",
+            storageBucket: "semitonos-dtf-jc.firebasestorage.app",
+            messagingSenderId: "603965986990",
+            appId: "1:603965986990:web:5087d113fae0c56393f53f",
+            measurementId: "G-YZM7S5PVH5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database(); 
+
+        const overlay = document.getElementById('auth-overlay');
+        const app = document.getElementById('main-app');
+        const btnLogin = document.getElementById('btn-login');
+        const errorMsg = document.getElementById('login-error');
+        
+        let sessionListener = null; 
+        let isPremiumUser = false;
+        let trialExpired = false;
+        window.lastProcessedSize = 29; // Guardar la medida procesada
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                const sessionRef = database.ref('active_sessions/' + user.uid);
+                const mySessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+                sessionRef.set(mySessionId);
+                sessionListener = sessionRef.on('value', (snapshot) => {
+                    const cloudSessionId = snapshot.val();
+                    if (cloudSessionId && cloudSessionId !== mySessionId) {
+                        alert("⚠️ SESIÓN CERRADA: Alguien más acaba de ingresar con tu cuenta.");
+                        auth.signOut(); 
+                    }
+                });
+                const userRef = database.ref('users_data/' + user.uid);
+                userRef.once('value').then((snapshot) => {
+                    const userData = snapshot.val();
+                    if (!userData) {
+                        userRef.set({ createdAt: Date.now(), isPremium: false });
+                        isPremiumUser = false; trialExpired = false;
+                    } else {
+                        isPremiumUser = userData.isPremium || false;
+                        const daysElapsed = (Date.now() - userData.createdAt) / (1000 * 60 * 60 * 24);
+                        if (!isPremiumUser && daysElapsed > 90) trialExpired = true;
+                    }
+                });
+                overlay.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; app.style.display = 'flex'; }, 500);
+            } else {
+                if (sessionListener) database.ref('active_sessions').off('value', sessionListener);
+                overlay.style.display = 'flex'; overlay.style.opacity = '1'; app.style.display = 'none';
+            }
+        });
+
+        btnLogin.addEventListener('click', () => {
+            const email = document.getElementById('user-email').value;
+            const pass = document.getElementById('user-pass').value;
+            if(!email || !pass) { errorMsg.innerText = "Correo y contraseña requeridos."; errorMsg.style.display = 'block'; return; }
+            btnLogin.innerText = "VERIFICANDO...";
+            auth.signInWithEmailAndPassword(email, pass).catch(e => { errorMsg.innerText = "Acceso denegado."; errorMsg.style.display = 'block'; btnLogin.innerText = "ENTRAR"; });
+        });
+
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => auth.signOut());
+
+        // 🌍 BILINGUAL SYSTEM
+        let currentLang = 'es';
+        const dict = {
+            es: {
+                subtitle: "Professional DTF RIP Engine • 720 PPP NATIVO", btnImport: "IMPORTAR IMAGEN",
+                panelLeft: "ANTES (Original)", resLeft: "Entrada RAW", panelRight: "DESPUÉS (RIP Final)", resRight: "Previsualización (Render 720 ppp)",
+                awaiting: "Esperando Procesamiento...", preprocess: "Preprocesamiento RAW",
+                bgProTitle: "✂️ HERRAMIENTAS PRO DTF", magicGotero: "Quitar Color Selectivo (Chroma Key):", btnGotero: "Activar Gotero", tolMagic: "Tolerancia", btnApplyMagic: "Borrar Color Seleccionado", halosTitle: "Corrección de Bordes (Eliminador de Halos):", btnHalos: "Contraer Bordes (Choke 1px)",
+                bright: "Brillo", contrast: "Contraste", sat: "Saturación",
+                configTrama: "Configuración de Trama", lpi: "Tamaño de Punto (LPI):",
+                opt15: "15 LPI (Puntos extra grandes)", opt25: "25 LPI (Puntos grandes)", opt35: "35 LPI (Trama Ideal JCDTF)", opt45: "45 LPI (Puntos finos)", opt55: "55 LPI (Puntos extra finos)",
+                knockout: "Modo de Transpiración (Knockout):", modB: "Para TELA NEGRA (Perfora Negros)", modW: "Para TELA BLANCA (Perfora Blancos)", modC: "Para TELA DE COLOR (Usa color del Gotero)",
+                sizeTitle: "Ancho de Salida (Resolución 720 PPP):", optSize10: "10 cm (Logos / Pecho)", optSize15: "15 cm (Bolsillo / Infantil)", optSize20: "20 cm (A4 / Mediano)", optSize29: "29 cm (A3 / Estándar DTF)", optSize35: "35 cm (A3+ / Grande)", optSize40: "40 cm (Tabloide / Extra Grande)",
+                btnProcess: "PROCESAR RIP 720 PPP", btnProcessing: "⏳ PROCESANDO RIP...",
+                btnDownload: "DESCARGAR PNG HD", btnDownloading: "⏳ PREPARANDO...", alertImg: "Selecciona el diseño primero.",
+                zoomTip: "🔍 Zoom: Rueda ratón | Mover: Alt+Clic", btnCenter: "🔄 CENTRAR"
+            },
+            en: {
+                subtitle: "Professional DTF RIP Engine • NATIVE 720 DPI", btnImport: "IMPORT IMAGE",
+                panelLeft: "BEFORE (Original)", resLeft: "RAW Input", panelRight: "AFTER (Final RIP)", resRight: "Preview (720 dpi Render)",
+                awaiting: "Awaiting Processing...", preprocess: "RAW Pre-processing",
+                bgProTitle: "✂️ PRO DTF TOOLS", magicGotero: "Selective Color Removal (Chroma Key):", btnGotero: "Activate Dropper", tolMagic: "Tolerance", btnApplyMagic: "Erase Selected Color", halosTitle: "Edge Correction (Halo Remover):", btnHalos: "Choke Edges (1px)",
+                bright: "Brightness", contrast: "Contrast", sat: "Saturation",
+                configTrama: "Halftone Configuration", lpi: "Dot Size (LPI):",
+                opt15: "15 LPI (Extra large dots)", opt25: "25 LPI (Large dots)", opt35: "35 LPI (Ideal JCDTF Pattern)", opt45: "45 LPI (Fine dots)", opt55: "55 LPI (Extra fine dots)",
+                knockout: "Breathability Mode (Knockout):", modB: "For BLACK SHIRT (Knockout Black)", modW: "For WHITE SHIRT (Knockout White)", modC: "For COLOR SHIRT (Uses Dropper color)",
+                sizeTitle: "Output Width (720 DPI Resolution):", optSize10: "10 cm (Logos / Pocket)", optSize15: "15 cm (Pocket / Kids)", optSize20: "20 cm (A4 / Medium Design)", optSize29: "29 cm (A3 / Standard DTF)", optSize35: "35 cm (A3+ / Large Design)", optSize40: "40 cm (Tabloid / Extra Large)",
+                btnProcess: "PROCESS 720 DPI RIP", btnProcessing: "⏳ PROCESSING RIP...",
+                btnDownload: "DOWNLOAD HD PNG", btnDownloading: "⏳ PREPARING...", alertImg: "Select the design first.",
+                zoomTip: "🔍 Zoom: Mouse Wheel | Pan: Alt+Click", btnCenter: "🔄 CENTER"
+            }
+        };
+
+        document.getElementById('btnIdioma').addEventListener('click', () => {
+            currentLang = currentLang === 'es' ? 'en' : 'es'; const t = dict[currentLang];
+            document.getElementById('lblSubtitle').innerText = t.subtitle; document.getElementById('lblBtnImport').innerText = t.btnImport;
+            document.getElementById('lblPanelLeft').innerText = t.panelLeft; document.getElementById('lblResLeft').innerText = t.resLeft;
+            document.getElementById('lblPanelRight').innerText = t.panelRight; document.getElementById('lblResRight').innerText = t.resRight;
+            document.getElementById('lblAwaiting').innerText = t.awaiting; document.getElementById('lblPreprocess').innerText = t.preprocess;
+            document.getElementById('lblBgProTitle').innerText = t.bgProTitle; document.getElementById('lblMagicGotero').innerText = t.magicGotero;
+            document.getElementById('lblBtnGotero').innerText = t.btnGotero; document.getElementById('lblTolMagic').innerText = t.tolMagic;
+            document.getElementById('lblBtnApplyMagic').innerText = t.btnApplyMagic; document.getElementById('lblHalosTitle').innerText = t.halosTitle;
+            document.getElementById('lblBtnHalos').innerText = t.btnHalos;
+            document.getElementById('lblBrightness').innerText = t.bright; document.getElementById('lblContrast').innerText = t.contrast; document.getElementById('lblSat').innerText = t.sat;
+            document.getElementById('lblConfigTrama').innerText = t.configTrama; document.getElementById('lblLpi').innerText = t.lpi;
+            document.getElementById('optLpi15').innerText = t.opt15; document.getElementById('optLpi25').innerText = t.opt25; document.getElementById('optLpi35').innerText = t.opt35;
+            document.getElementById('optLpi45').innerText = t.opt45; document.getElementById('optLpi55').innerText = t.opt55;
+            document.getElementById('lblKnockout').innerText = t.knockout; document.getElementById('optModoB').innerText = t.modB; document.getElementById('optModoW').innerText = t.modW; document.getElementById('optModoC').innerText = t.modC;
+            document.getElementById('lblSizeTitle').innerText = t.sizeTitle; document.getElementById('optSize10').innerText = t.optSize10; document.getElementById('optSize15').innerText = t.optSize15; document.getElementById('optSize20').innerText = t.optSize20; document.getElementById('optSize29').innerText = t.optSize29; document.getElementById('optSize35').innerText = t.optSize35; document.getElementById('optSize40').innerText = t.optSize40;
+            document.getElementById('lblBtnProcess').innerText = t.btnProcess; 
+            document.getElementById('lblBtnDownload').innerText = t.btnDownload + (window.canvasExportacionHD ? ` (${window.lastProcessedSize}cm)` : " (29cm)");
+            document.getElementById('lblZoomTip').innerText = t.zoomTip; document.getElementById('btnResetZoom').innerText = t.btnCenter;
+        });
+
+        // 🎨 CORE ENGINE
+        const canvas = new fabric.Canvas('lienzoOriginal', { width: 480, height: 650, backgroundColor: 'transparent' });
+        const imgPreviewRIP = document.getElementById('imgPreviewRIP');
+        const placeholderRIP = document.getElementById('placeholderRIP');
+        const btnSubir = document.getElementById('btnSubir');
+        const inputImagen = document.getElementById('inputImagen');
+        const btnVerSplit = document.getElementById('btnVerSplit');
+        const btnResetZoom = document.getElementById('btnResetZoom');
+        window.canvasExportacionHD = null;
+
+        btnSubir.addEventListener('click', () => inputImagen.click());
+        inputImagen.addEventListener('change', e => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                fabric.Image.fromURL(ev.target.result, img => {
+                    if (img.width > canvas.width) img.scaleToWidth(canvas.width * 0.85);
+                    if (img.height > canvas.height) img.scaleToHeight(canvas.height * 0.85);
+                    img.set({ cornerColor: '#ffffff', cornerStrokeColor: '#ff3366', borderColor: '#ff3366', cornerSize: 10, transparentCorners: false });
+                    img.customRawImage = ev.target.result; img.trueOriginal = ev.target.result;
+                    
+                    canvas.clear(); 
+                    canvas.setViewportTransform([1,0,0,1,0,0]); 
+                    canvas.add(img); canvas.centerObject(img); canvas.setActiveObject(img); canvas.renderAll();
+                    
+                    imgPreviewRIP.style.display = 'none'; placeholderRIP.style.display = 'block';
+                    document.getElementById('btnDescargar').disabled = true; window.canvasExportacionHD = null;
+                    btnVerSplit.style.display = 'block';
+                    btnResetZoom.style.display = 'block';
+                    
+                    const t = dict[currentLang];
+                    document.getElementById('lblBtnDownload').innerText = t.btnDownload + " (29cm)";
+                });
+            };
+            reader.readAsDataURL(file); inputImagen.value = '';
+        });
+
+        let isShowingOriginal = false;
+        btnVerSplit.addEventListener('click', () => {
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if(!obj || !obj.trueOriginal) return;
+            isShowingOriginal = !isShowingOriginal;
+            if(isShowingOriginal) { btnVerSplit.classList.add('active'); btnVerSplit.innerText = currentLang === 'es' ? '👀 MOSTRANDO ORIGINAL' : '👀 SHOWING ORIGINAL'; obj.setSrc(obj.trueOriginal, () => canvas.renderAll()); }
+            else { btnVerSplit.classList.remove('active'); btnVerSplit.innerText = currentLang === 'es' ? '👁️ VER ORIGINAL' : '👁️ VIEW ORIGINAL'; if(obj.customRawImage) obj.setSrc(obj.customRawImage, () => canvas.renderAll()); }
+        });
+
+        btnResetZoom.addEventListener('click', () => {
+            canvas.setViewportTransform([1,0,0,1,0,0]);
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0];
+            if (obj) canvas.centerObject(obj);
+            canvas.renderAll();
+        });
+
+        // 🔍 LÓGICA DE ZOOM Y PANEO
+        canvas.on('mouse:wheel', function(opt) {
+            var delta = opt.e.deltaY;
+            var zoom = canvas.getZoom();
+            zoom *= 0.999 ** delta;
+            if (zoom > 20) zoom = 20;
+            if (zoom < 0.5) zoom = 0.5;
+            canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+            opt.e.preventDefault();
+            opt.e.stopPropagation();
+        });
+
+        canvas.on('mouse:move', function(opt) {
+            if (this.isDragging) {
+                var e = opt.e;
+                var vpt = this.viewportTransform;
+                vpt[4] += e.clientX - this.lastPosX;
+                vpt[5] += e.clientY - this.lastPosY;
+                this.requestRenderAll();
+                this.lastPosX = e.clientX;
+                this.lastPosY = e.clientY;
+            }
+        });
+
+        canvas.on('mouse:up', function(opt) {
+            if (this.isDragging) {
+                this.setViewportTransform(this.viewportTransform);
+                this.isDragging = false;
+                this.selection = true;
+                if(modoGotero) canvas.defaultCursor = 'crosshair';
+                else canvas.defaultCursor = 'default';
+            }
+        });
+
+        // ✂️ PRO TOOLS
+        let modoGotero = false; let colorGotero = {r: 0, g: 0, b: 0};
+        const btnGotero = document.getElementById('btnGotero');
+        const colorInput = document.getElementById('colorMuestraGotero');
+        const slTolMagic = document.getElementById('slTolMagic');
+        slTolMagic.addEventListener('input', () => document.getElementById('valTolMagic').innerText = slTolMagic.value);
+
+        btnGotero.addEventListener('click', () => {
+            modoGotero = !modoGotero; btnGotero.style.background = modoGotero ? 'var(--accent)' : '#2b2b2b';
+            document.getElementById('lblBtnGotero').innerText = modoGotero ? (currentLang === 'es' ? '🎯 Toca un color...' : '🎯 Pick a color...') : (currentLang === 'es' ? 'Activar Gotero' : 'Activate Dropper');
+            canvas.defaultCursor = modoGotero ? 'crosshair' : 'default';
+        });
+
+        canvas.on('mouse:down', function(opt) {
+            if (opt.e.altKey === true) {
+                this.isDragging = true; this.selection = false; this.lastPosX = opt.e.clientX; this.lastPosY = opt.e.clientY; canvas.defaultCursor = 'grabbing'; return;
+            }
+            if (!modoGotero) return;
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0];
+            if (!obj) return;
+
+            const el = canvas.lowerCanvasEl;
+            const ctx = el.getContext('2d', {willReadFrequently: true});
+            const bound = el.getBoundingClientRect();
+            const x = (opt.e.clientX - bound.left) * (el.width / bound.width);
+            const y = (opt.e.clientY - bound.top) * (el.height / bound.height);
+            const pixel = ctx.getImageData(x, y, 1, 1).data;
+            
+            if(pixel[3] > 0) {
+                colorGotero = {r: pixel[0], g: pixel[1], b: pixel[2]};
+                const rgbToHex = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+                colorInput.value = rgbToHex(pixel[0], pixel[1], pixel[2]);
+            }
+            
+            modoGotero = false; btnGotero.style.background = '#2b2b2b';
+            document.getElementById('lblBtnGotero').innerText = currentLang === 'es' ? 'Activar Gotero' : 'Activate Dropper'; 
+            canvas.defaultCursor = 'default';
+            aplicarFiltrosRAWPreview();
+        });
+
+        colorInput.addEventListener('input', function() {
+            let hex = this.value; let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if(result) colorGotero = { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) };
+            modoGotero = false; btnGotero.style.background = '#2b2b2b';
+            document.getElementById('lblBtnGotero').innerText = currentLang === 'es' ? 'Activar Gotero' : 'Activate Dropper';
+            canvas.defaultCursor = 'default'; aplicarFiltrosRAWPreview();
+        });
+
+        document.getElementById('btnAplicarGotero').addEventListener('click', () => {
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if(!obj || !obj.customRawImage) return;
+            const tol = parseInt(slTolMagic.value);
+            const imgT = new Image();
+            imgT.onload = () => {
+                const offC = document.createElement('canvas'); offC.width = imgT.width; offC.height = imgT.height;
+                const ctx = offC.getContext('2d', {willReadFrequently:true}); ctx.drawImage(imgT, 0, 0);
+                const iData = ctx.getImageData(0,0, offC.width, offC.height); const data = iData.data;
+                for(let i=0; i<data.length; i+=4) {
+                    if(data[i+3] === 0) continue;
+                    let dist = Math.sqrt(Math.pow(data[i]-colorGotero.r, 2) + Math.pow(data[i+1]-colorGotero.g, 2) + Math.pow(data[i+2]-colorGotero.b, 2));
+                    if(dist <= tol) data[i+3] = 0;
+                }
+                ctx.putImageData(iData, 0, 0); obj.customRawImage = offC.toDataURL('image/png');
+                if(isShowingOriginal) { isShowingOriginal = false; btnVerSplit.classList.remove('active'); btnVerSplit.innerText = currentLang === 'es' ? '👁️ VER ORIGINAL' : '👁️ VIEW ORIGINAL'; }
+                obj.setSrc(obj.customRawImage, () => { canvas.renderAll(); aplicarFiltrosRAWPreview(); });
+            };
+            imgT.src = obj.customRawImage;
+        });
+
+        document.getElementById('btnHalos').addEventListener('click', () => {
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if(!obj || !obj.customRawImage) return;
+            const btn = document.getElementById('btnHalos'); const lbl = document.getElementById('lblBtnHalos');
+            const textOrig = lbl.innerText; lbl.innerText = '⏳...'; btn.disabled = true;
+            setTimeout(() => {
+                const imgT = new Image();
+                imgT.onload = () => {
+                    const w = imgT.width, h = imgT.height;
+                    const offC = document.createElement('canvas'); offC.width = w; offC.height = h;
+                    const ctx = offC.getContext('2d', {willReadFrequently:true}); ctx.drawImage(imgT, 0, 0);
+                    const iData = ctx.getImageData(0,0, w, h); const data = iData.data;
+                    const newData = new Uint8ClampedArray(data);
+                    for(let y=1; y<h-1; y++) {
+                        for(let x=1; x<w-1; x++) {
+                            const i = (y*w + x)*4;
+                            if(data[i+3] > 0) {
+                                if(data[((y-1)*w+x)*4+3]===0 || data[((y+1)*w+x)*4+3]===0 || data[(y*w+x-1)*4+3]===0 || data[(y*w+x+1)*4+3]===0) newData[i+3] = 0;
+                            }
+                        }
+                    }
+                    for(let i=0; i<data.length; i++) data[i] = newData[i];
+                    ctx.putImageData(iData, 0, 0); obj.customRawImage = offC.toDataURL('image/png');
+                    obj.setSrc(obj.customRawImage, () => { canvas.renderAll(); aplicarFiltrosRAWPreview(); lbl.innerText = textOrig; btn.disabled = false; });
+                };
+                imgT.src = obj.customRawImage;
+            }, 50);
+        });
+
+        // FILTERS
+        const slBrillo = document.getElementById('slBrillo'), slContraste = document.getElementById('slContraste'), slSaturacion = document.getElementById('slSaturacion');
+        const updateLbls = () => {
+            document.getElementById('valBrillo').innerText = Math.round(slBrillo.value * 100);
+            document.getElementById('valContraste').innerText = Math.round(slContraste.value * 100);
+            document.getElementById('valSaturacion').innerText = Math.round(slSaturacion.value * 100);
+        };
+        [slBrillo, slContraste, slSaturacion].forEach(s => s.addEventListener('input', updateLbls));
+
+        function aplicarFiltrosRAWPreview() {
+            if (isShowingOriginal) return;
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if (!obj || !obj.customRawImage) return;
+            setTimeout(() => {
+                const imgT = new Image();
+                imgT.onload = () => {
+                    const w = imgT.width, h = imgT.height;
+                    const offC = document.createElement('canvas'); offC.width = w; offC.height = h;
+                    const ctx = offC.getContext('2d', { willReadFrequently: true }); ctx.drawImage(imgT, 0, 0);
+                    const iData = ctx.getImageData(0, 0, w, h); const pix = iData.data;
+                    const valB = parseFloat(slBrillo.value) * 255, valC = parseFloat(slContraste.value) * 255, valS = parseFloat(slSaturacion.value) + 1;
+                    const factorC = (259 * (valC + 255)) / (255 * (259 - valC));
+                    for (let i = 0; i < pix.length; i += 4) {
+                        if (pix[i+3] === 0) continue;
+                        let r = pix[i], g = pix[i+1], b = pix[i+2];
+                        if (valS !== 1) { let [h, s, l] = rgbToHsl(r, g, b); s = Math.min(1, Math.max(0, s * valS)); [r, g, b] = hslToRgb(h, s, l); }
+                        if (valB !== 0) { r = Math.min(255, Math.max(0, r + valB)); g = Math.min(255, Math.max(0, g + valB)); b = Math.min(255, Math.max(0, b + valB)); }
+                        if (valC !== 0) { r = Math.min(255, Math.max(0, factorC * (r - 128) + 128)); g = Math.min(255, Math.max(0, factorC * (g - 128) + 128)); b = Math.min(255, Math.max(0, factorC * (b - 128) + 128)); }
+                        pix[i] = r; pix[i+1] = g; pix[i+2] = b;
+                    }
+                    ctx.putImageData(iData, 0, 0);
+                    fabric.Image.fromURL(offC.toDataURL('image/png'), imgF => {
+                        imgF.set({ left: obj.left, top: obj.top, scaleX: obj.scaleX, scaleY: obj.scaleY, cornerColor: '#ffffff', cornerStrokeColor: '#ff3366', borderColor: '#ff3366', cornerSize: 10, transparentCorners: false });
+                        imgF.customRawImage = obj.customRawImage; imgF.trueOriginal = obj.trueOriginal;
+                        canvas.remove(obj); canvas.add(imgF); canvas.setActiveObject(imgF); canvas.renderAll();
+                    });
+                };
+                imgT.src = obj.customRawImage;
+            }, 50);
+        }
+
+        [slBrillo, slContraste, slSaturacion].forEach(s => s.addEventListener('change', aplicarFiltrosRAWPreview));
+        document.getElementById('btnResetRAW').addEventListener('click', () => { slBrillo.value = 0; slContraste.value = 0; slSaturacion.value = 0; updateLbls(); aplicarFiltrosRAWPreview(); });
+
+        // 🚀 RIP ENGINE 720 DPI
+        const btnSemitono = document.getElementById('btnSemitono');
+        const selectLPI = document.getElementById('selectLPI');
+        const lblBtnProcess = document.getElementById('lblBtnProcess');
+
+        btnSemitono.addEventListener('click', () => {
+            const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if (!obj || !obj.customRawImage) return;
+            const oldT = lblBtnProcess.innerHTML; lblBtnProcess.innerHTML = '⏳ PROCESANDO...'; btnSemitono.disabled = true;
+            setTimeout(() => {
+                const imgT = new Image();
+                imgT.onload = () => {
+                    // SE LEE LA MEDIDA EXACTA SELECCIONADA POR EL USUARIO
+                    const ppp = 720;
+                    const cmW = parseFloat(document.getElementById('selectTamano').value); 
+                    window.lastProcessedSize = cmW; // Guardamos para el botón de descarga
+                    
+                    const w720 = Math.round((cmW / 2.54) * ppp), fEscala = w720 / imgT.width, h720 = Math.round(imgT.height * fEscala);
+                    const cL = document.createElement('canvas'); cL.width = w720; cL.height = h720;
+                    const ctxL = cL.getContext('2d', { willReadFrequently: true }); ctxL.drawImage(imgT, 0, 0, w720, h720);
+                    const pRaw = ctxL.getImageData(0, 0, w720, h720).data;
+                    const cF = document.createElement('canvas'); cF.width = w720; cF.height = h720;
+                    const ctxF = cF.getContext('2d'); const iF = ctxF.createImageData(w720, h720); const pixF = iF.data;
+                    const vB = parseFloat(slBrillo.value)*255, vC = parseFloat(slContraste.value)*255, vS = parseFloat(slSaturacion.value)+1, fC = (259*(vC+255))/(255*(259-vC));
+                    const modoT = document.getElementById('selectModoTrama').value, lpi = parseInt(selectLPI.value), cSize = ppp / lpi, angle = 22.5*(Math.PI/180), cosA = Math.cos(angle), sinA = Math.sin(angle), halfT = Math.max(1, Math.floor(cSize/4));
+                    for (let y = 0; y < h720; y++) {
+                        for (let x = 0; x < w720; x++) {
+                            const i = (y * w720 + x) * 4; if (pRaw[i+3] === 0) continue;
+                            let r = pRaw[i], g = pRaw[i+1], b = pRaw[i+2];
+                            if (vS !== 1) { let [h, s, l] = rgbToHsl(r, g, b); s = Math.min(1, Math.max(0, s * vS)); [r, g, b] = hslToRgb(h, s, l); }
+                            r = Math.min(255, Math.max(0, r + vB)); g = Math.min(255, Math.max(0, g + vB)); b = Math.min(255, Math.max(0, b + vB));
+                            r = Math.min(255, Math.max(0, fC * (r - 128) + 128)); g = Math.min(255, Math.max(0, fC * (g - 128) + 128)); b = Math.min(255, Math.max(0, fC * (b - 128) + 128));
+                            const rotX = x * cosA + y * sinA, rotY = -x * sinA + y * cosA, cX = Math.floor(rotX/cSize)*cSize+(cSize/2), cY = Math.floor(rotY/cSize)*cSize+(cSize/2), nx = (rotX-cX)/(cSize/2), ny = (rotY-cY)/(cSize/2), dC = nx*nx+ny*ny, iNx = 1-Math.abs(nx), iNy = 1-Math.abs(ny), dK = iNx*iNx+iNy*iNy, uV = dC/(dC+dK);
+                            let sMax=0, sMin=0, cnt=0, sDist=0;
+                            for(let dy=-1; dy<=1; dy++) {
+                                for(let dx=-1; dx<=1; dx++) {
+                                    let px=Math.round(cX*cosA-cY*sinA)+dx*halfT, py=Math.round(cX*sinA+cY*cosA)+dy*halfT;
+                                    if(px>=0 && px<w720 && py>=0 && py<h720) {
+                                        let idx=(py*w720+px)*4; if(pRaw[idx+3]>10){
+                                            let pr=pRaw[idx], pg=pRaw[idx+1], pb=pRaw[idx+2];
+                                            sMax+=Math.max(pr,pg,pb)/255; sMin+=Math.min(pr,pg,pb)/255;
+                                            if(modoT==='color') sDist+=Math.sqrt(Math.pow(pr-colorGotero.r,2)+Math.pow(pg-colorGotero.g,2)+Math.pow(pb-colorGotero.b,2))/441.67;
+                                            cnt++;
+                                        }
+                                    }
+                                }
+                            }
+                            if(cnt===0) continue;
+                            let intens = 1.0;
+                            if(modoT==='blanca') intens = 1.0-(sMin/cnt); else if(modoT==='negra') intens = sMax/cnt; else intens = Math.min(1.0, (sDist/cnt)*2.5);
+                            intens = Math.min(0.88, Math.max(0, Math.pow(intens, 0.7)));
+                            if (intens > uV) { pixF[i]=Math.min(255, r*1.1); pixF[i+1]=Math.min(255, g*1.1); pixF[i+2]=Math.min(255, b*1.1); pixF[i+3]=255; }
+                        }
+                    }
+                    ctxF.putImageData(iF, 0, 0); window.canvasExportacionHD = cF;
+                    placeholderRIP.style.display = 'none'; imgPreviewRIP.src = cF.toDataURL('image/png'); imgPreviewRIP.style.display = 'block';
+                    lblBtnProcess.innerHTML = oldT; btnSemitono.disabled = false; document.getElementById('btnDescargar').disabled = false;
+                    
+                    // Actualizar el texto del botón de descarga dinámicamente
+                    const t = dict[currentLang];
+                    document.getElementById('lblBtnDownload').innerText = `${t.btnDownload} (${window.lastProcessedSize}cm)`;
+                };
+                imgT.src = obj.customRawImage;
+            }, 50);
+        });
+
+        // 📥 DOWNLOAD
+        const btnDescargar = document.getElementById('btnDescargar');
+        btnDescargar.addEventListener('click', () => {
+            if (!window.canvasExportacionHD) return;
+            if (trialExpired) {
+                const nag = document.getElementById('nag-overlay'); const btnW = document.getElementById('btn-wait-download');
+                nag.style.display = 'flex'; let time = 20; btnW.disabled = true;
+                const count = setInterval(() => {
+                    time--; document.getElementById('nag-timer').innerText = time;
+                    if (time <= 0) { clearInterval(count); btnW.disabled = false; btnW.style.background = 'transparent'; btnW.style.color = '#ccc'; btnW.innerHTML = '📥 Continuar Descarga Lenta'; }
+                }, 1000);
+                btnW.onclick = () => { nag.style.display = 'none'; executeDl(); }; return;
+            }
+            executeDl();
+        });
+
+        function executeDl() {
+            const oldT = document.getElementById('lblBtnDownload').innerHTML; document.getElementById('lblBtnDownload').innerHTML = '⏳...'; btnDescargar.disabled = true;
+            setTimeout(() => {
+                const link = document.createElement('a'); 
+                const modoTrama = document.getElementById('selectModoTrama').value;
+                // Agregamos la medida procesada al nombre del archivo
+                link.download = `JCDTF_Trama_${modoTrama.toUpperCase()}_${window.lastProcessedSize}cm_720ppp.png`; 
+                link.href = window.canvasExportacionHD.toDataURL('image/png');
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                document.getElementById('lblBtnDownload').innerHTML = oldT; btnDescargar.disabled = false;
+            }, 100);
+        }
+
+        // UTILS
+        function rgbToHsl(r, g, b) { r/=255; g/=255; b/=255; let max=Math.max(r,g,b), min=Math.min(r,g,b), h, s, l=(max+min)/2; if(max===min) h=s=0; else { let d=max-min; s=l>0.5?d/(2-max-min):d/(max+min); switch(max){ case r:h=(g-b)/d+(g<b?6:0);break; case g:h=(b-r)/d+2;break; case b:h=(r-g)/d+4;break; } h/=6; } return [h,s,l]; }
+        function hslToRgb(h, s, l) { let r, g, b; if(s===0) r=g=b=l; else { const hue2rgb = (p,q,t) => { if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }; let q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q; r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3); } return [Math.round(r*255), Math.round(g*255), Math.round(b*255)]; }
+    </script>
+</body>
+</html>
