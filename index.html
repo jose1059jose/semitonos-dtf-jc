@@ -33,11 +33,11 @@
         
         body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* ================= PANTALLA DE LOGIN ================= */
-        #auth-overlay {
+        /* ================= PANTALLA DE LOGIN PREMIUM ================= */
+        #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-main);
-            display: flex; justify-content: center; align-items: center;
+            background-color: rgba(13,13,15,0.95);
+            display: none; justify-content: center; align-items: center;
             z-index: 9999; transition: opacity 0.5s;
         }
         .login-card {
@@ -55,8 +55,9 @@
         }
         .login-card input:focus { border-color: var(--accent); }
         .error-msg { color: var(--accent); font-size: 12px; margin-bottom: 15px; display: none; background: rgba(255, 51, 102, 0.1); padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 51, 102, 0.3); word-wrap: break-word;}
+        .btn-close-login { background: transparent; border: none; color: #888; margin-top: 15px; cursor: pointer; font-size: 12px; text-decoration: underline; }
         
-        #main-app { display: none; flex-direction: column; height: 100%; }
+        #main-app { display: flex; flex-direction: column; height: 100%; }
 
         /* ================= HEADER ================= */
         header { background-color: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
@@ -82,7 +83,10 @@
         .btn-download { background: linear-gradient(135deg, #ff9900, #ff5500); color: white; margin-top: auto; }
         .btn-download:hover { box-shadow: 0 5px 15px rgba(255,85,0,0.4); transform: translateY(-1px); }
         
-        .btn-logout { background: transparent; border: 1px solid #444; color: #888; width: auto; padding: 6px 12px; font-size: 11px; cursor: pointer; border-radius: 6px; transition: 0.2s;}
+        .btn-outline { background: transparent; border: 1px solid #ff3366; color: #ff3366; width: auto; padding: 6px 12px; font-size: 11px; cursor: pointer; border-radius: 6px; transition: 0.2s;}
+        .btn-outline:hover { background: rgba(255,51,102,0.1); }
+        
+        .btn-logout { background: transparent; border: 1px solid #444; color: #888; width: auto; padding: 6px 12px; font-size: 11px; cursor: pointer; border-radius: 6px; transition: 0.2s; display: none;}
         .btn-logout:hover { background: #333; color: white; }
 
         .btn-accent { background-color: var(--accent); color: white; width: 100%; padding: 12px; font-size: 14px;}
@@ -135,25 +139,22 @@
 </head>
 <body>
 
-    <div id="auth-overlay">
+    <div id="login-overlay">
         <div class="login-card">
             <h2>SEMITONOS <span>DTF JC</span></h2>
-            <p>Introduce tus credenciales de miembro para acceder al motor RIP.</p>
+            <p>Acceso exclusivo para miembros Premium.</p>
             <div id="login-error" class="error-msg"></div>
             <input type="email" id="user-email" placeholder="Correo electrónico">
             <input type="password" id="user-pass" placeholder="Contraseña">
-            <button class="btn btn-accent" id="btn-login">ENTRAR AL PANEL</button>
-            <div style="margin-top: 20px; font-size: 10px; color: #555;">Soporte de Membresía: info@jcdtf.com</div>
+            <button class="btn btn-accent" id="btn-login-submit">INICIAR SESIÓN</button>
+            <button class="btn-close-login" onclick="document.getElementById('login-overlay').style.display='none'">Cancelar</button>
+            <div style="margin-top: 20px; font-size: 10px; color: #555;">Soporte de Membresía: jose1059jose@gmail.com</div>
         </div>
     </div>
 
     <div id="nag-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13,13,15,0.95); z-index: 9998; justify-content: center; align-items: center; text-align: center;">
-        <div class="login-card" style="border-color: #ff9900; max-width: 450px;">
-            <h2 style="color: #ff9900;">PERIODO DE PRUEBA TERMINADO</h2>
-            <p style="margin-top: 10px;">Tu acceso ultra-rápido de 90 días ha concluido. Para apoyar el mantenimiento de la plataforma y exportar sin demoras, adquiere la versión PRO.</p>
-            <a href="https://payhip.com/jcdtf" target="_blank" class="btn btn-download" style="width: 100%; margin-bottom: 20px; text-decoration: none; padding: 15px; font-size: 15px; border-radius: 6px;">💎 ADQUIRIR VERSIÓN PRO ($50/año)</a>
-            <button id="btn-wait-download" class="btn btn-primary" disabled style="background: #222; color: #555;">Generando descarga en <span id="nag-timer">20</span>s...</button>
-        </div>
+        <div class="login-card" style="border-color: #ff3366; max-width: 450px;" id="paywall-card">
+            </div>
     </div>
 
     <div id="main-app">
@@ -161,8 +162,10 @@
             <div class="logo-container">
                 <h1>SEMITONOS <span>DTF JC</span></h1>
                 <p id="lblSubtitle">Professional DTF RIP Engine • 720 PPP NATIVO</p>
+                <div id="trial-counter" style="font-size: 10px; color: #ff9900; margin-top: 4px; display: none;">Te quedan <span id="days-left">30</span> días de prueba</div>
             </div>
             <div class="header-actions">
+                <button class="btn-outline" id="btn-login-header">💎 Ingreso Premium</button>
                 <button class="btn-logout" id="btn-cerrar-sesion">🔒 Cerrar Sesión</button>
                 <button class="btn btn-lang" id="btnIdioma">🌐 EN / ES</button>
                 <button class="btn btn-import-img" id="btnSubir">
@@ -312,56 +315,146 @@
         const auth = firebase.auth();
         const database = firebase.database(); 
 
-        const overlay = document.getElementById('auth-overlay');
-        const app = document.getElementById('main-app');
-        const btnLogin = document.getElementById('btn-login');
+        // INTERFAZ Y ESTADOS
+        const loginOverlay = document.getElementById('login-overlay');
+        const paywallOverlay = document.getElementById('nag-overlay');
+        const paywallCard = document.getElementById('paywall-card');
+        const btnLoginSubmit = document.getElementById('btn-login-submit');
         const errorMsg = document.getElementById('login-error');
         
-        let sessionListener = null; 
         let isPremiumUser = false;
-        let trialExpired = false;
-        window.lastProcessedSize = 29; // Guardar la medida procesada
+        let isBlocked = false;
+        window.lastProcessedSize = 29;
 
+        // 🛡️ GENERACIÓN DE DEVICE ID (HUELLA DE LA PC)
+        let localDeviceId = localStorage.getItem('jcdtf_device_id');
+        if (!localDeviceId) {
+            localDeviceId = 'JCDTF-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            localStorage.setItem('jcdtf_device_id', localDeviceId);
+        }
+
+        // ⏱️ SISTEMA DE PRUEBA DE 30 DÍAS
+        function checkTrialStatus() {
+            if (isPremiumUser) return;
+            
+            let trialStart = localStorage.getItem('jcdtf_trial_start');
+            if (!trialStart) {
+                trialStart = Date.now();
+                localStorage.setItem('jcdtf_trial_start', trialStart);
+            }
+            
+            const daysElapsed = (Date.now() - parseInt(trialStart)) / (1000 * 60 * 60 * 24);
+            const daysLeft = Math.ceil(30 - daysElapsed);
+            
+            if (daysElapsed > 30) {
+                isBlocked = true;
+                showPaywall(
+                    "PERIODO DE PRUEBA TERMINADO",
+                    "Tu acceso libre de 30 días ha concluido. Para continuar utilizando el motor de renderizado a 720 PPP, solicita tu acceso escribiendo a:<br><br><strong style='color:#fff; font-size:18px;'>jose1059jose@gmail.com</strong>"
+                );
+                document.getElementById('trial-counter').style.display = 'none';
+            } else {
+                isBlocked = false;
+                document.getElementById('trial-counter').style.display = 'block';
+                document.getElementById('days-left').innerText = daysLeft;
+            }
+        }
+
+        function showPaywall(title, msg) {
+            paywallCard.innerHTML = `
+                <h2 style="color: #ff3366;">${title}</h2>
+                <p style="margin-top: 15px; font-size:14px; line-height: 1.5;">${msg}</p>
+                <hr style="border-color:#333; margin: 20px 0;">
+                <p style="font-size:12px; color:#888;">Si ya realizaste tu pago y tienes tu cuenta:</p>
+                <button onclick="abrirLoginPremium()" class="btn btn-outline" style="width:100%; margin-top:5px; padding:12px; font-size:14px;">Ingresar a mi cuenta Premium</button>
+            `;
+            paywallOverlay.style.display = 'flex';
+        }
+
+        window.abrirLoginPremium = function() {
+            paywallOverlay.style.display = 'none';
+            loginOverlay.style.display = 'flex';
+        }
+
+        // APERTURA DE LOGIN DESDE HEADER
+        document.getElementById('btn-login-header').addEventListener('click', () => {
+            loginOverlay.style.display = 'flex';
+        });
+
+        // 🔒 SISTEMA DE AUTENTICACIÓN FIREBASE
         auth.onAuthStateChanged(user => {
             if (user) {
-                const sessionRef = database.ref('active_sessions/' + user.uid);
-                const mySessionId = Date.now().toString() + Math.random().toString(36).substring(2);
-                sessionRef.set(mySessionId);
-                sessionListener = sessionRef.on('value', (snapshot) => {
-                    const cloudSessionId = snapshot.val();
-                    if (cloudSessionId && cloudSessionId !== mySessionId) {
-                        alert("⚠️ SESIÓN CERRADA: Alguien más acaba de ingresar con tu cuenta.");
-                        auth.signOut(); 
-                    }
-                });
                 const userRef = database.ref('users_data/' + user.uid);
                 userRef.once('value').then((snapshot) => {
                     const userData = snapshot.val();
+                    
                     if (!userData) {
-                        userRef.set({ createdAt: Date.now(), isPremium: false });
-                        isPremiumUser = false; trialExpired = false;
-                    } else {
-                        isPremiumUser = userData.isPremium || false;
-                        const daysElapsed = (Date.now() - userData.createdAt) / (1000 * 60 * 60 * 24);
-                        if (!isPremiumUser && daysElapsed > 90) trialExpired = true;
+                        auth.signOut();
+                        alert("Error: Tu cuenta aún no tiene plan asignado. Contacta a jose1059jose@gmail.com");
+                        return;
                     }
+
+                    // 1. Verificación de Device ID (Una sola PC)
+                    if (!userData.deviceId) {
+                        // Es la primera vez que entra, registramos la PC
+                        userRef.update({ deviceId: localDeviceId });
+                    } else if (userData.deviceId !== localDeviceId) {
+                        // Está intentando entrar desde otra PC
+                        auth.signOut();
+                        alert("⚠️ ACCESO DENEGADO: Esta cuenta ya está vinculada a otra computadora. No se permite compartir cuentas.");
+                        return;
+                    }
+
+                    // 2. Verificación de Fecha de Vencimiento
+                    const now = Date.now();
+                    if (userData.expirationDate && now > userData.expirationDate) {
+                        auth.signOut();
+                        showPaywall(
+                            "SUSCRIPCIÓN VENCIDA",
+                            "El periodo de tu plan actual ha terminado. Por favor, renueva tu suscripción escribiendo a:<br><br><strong style='color:#fff; font-size:18px;'>jose1059jose@gmail.com</strong>"
+                        );
+                        return;
+                    }
+
+                    // USUARIO PREMIUM ACTIVO Y VERIFICADO
+                    isPremiumUser = true;
+                    isBlocked = false;
+                    loginOverlay.style.display = 'none';
+                    paywallOverlay.style.display = 'none';
+                    document.getElementById('btn-login-header').style.display = 'none';
+                    document.getElementById('btn-cerrar-sesion').style.display = 'inline-block';
+                    document.getElementById('trial-counter').style.display = 'block';
+                    document.getElementById('trial-counter').innerHTML = '<span style="color:#00e676;">💎 Acceso Premium Activo</span>';
                 });
-                overlay.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; app.style.display = 'flex'; }, 500);
             } else {
-                if (sessionListener) database.ref('active_sessions').off('value', sessionListener);
-                overlay.style.display = 'flex'; overlay.style.opacity = '1'; app.style.display = 'none';
+                isPremiumUser = false;
+                document.getElementById('btn-login-header').style.display = 'inline-block';
+                document.getElementById('btn-cerrar-sesion').style.display = 'none';
+                document.getElementById('trial-counter').innerHTML = 'Te quedan <span id="days-left"></span> días de prueba';
+                checkTrialStatus();
             }
         });
 
-        btnLogin.addEventListener('click', () => {
+        // ACCIÓN DE INICIAR SESIÓN
+        btnLoginSubmit.addEventListener('click', () => {
             const email = document.getElementById('user-email').value;
             const pass = document.getElementById('user-pass').value;
             if(!email || !pass) { errorMsg.innerText = "Correo y contraseña requeridos."; errorMsg.style.display = 'block'; return; }
-            btnLogin.innerText = "VERIFICANDO...";
-            auth.signInWithEmailAndPassword(email, pass).catch(e => { errorMsg.innerText = "Acceso denegado."; errorMsg.style.display = 'block'; btnLogin.innerText = "ENTRAR"; });
+            btnLoginSubmit.innerText = "VERIFICANDO...";
+            
+            auth.signInWithEmailAndPassword(email, pass).catch(e => { 
+                errorMsg.innerText = "Credenciales incorrectas."; 
+                errorMsg.style.display = 'block'; 
+                btnLoginSubmit.innerText = "INICIAR SESIÓN"; 
+            });
         });
 
-        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => auth.signOut());
+        // CERRAR SESIÓN
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.reload(); // Recarga para volver al estado trial
+            });
+        });
 
         // 🌍 BILINGUAL SYSTEM
         let currentLang = 'es';
@@ -427,7 +520,11 @@
         const btnResetZoom = document.getElementById('btnResetZoom');
         window.canvasExportacionHD = null;
 
-        btnSubir.addEventListener('click', () => inputImagen.click());
+        btnSubir.addEventListener('click', () => {
+            if (isBlocked) { alert("Tu acceso está bloqueado. Por favor ingresa con una cuenta Premium."); return; }
+            inputImagen.click();
+        });
+
         inputImagen.addEventListener('change', e => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -648,15 +745,17 @@
         const lblBtnProcess = document.getElementById('lblBtnProcess');
 
         btnSemitono.addEventListener('click', () => {
+            if (isBlocked) { alert("Tu acceso está bloqueado. Por favor ingresa con una cuenta Premium."); return; }
+            
             const obj = canvas.getActiveObject() || canvas.getObjects()[0]; if (!obj || !obj.customRawImage) return;
             const oldT = lblBtnProcess.innerHTML; lblBtnProcess.innerHTML = '⏳ PROCESANDO...'; btnSemitono.disabled = true;
+            
             setTimeout(() => {
                 const imgT = new Image();
                 imgT.onload = () => {
-                    // SE LEE LA MEDIDA EXACTA SELECCIONADA POR EL USUARIO
                     const ppp = 720;
                     const cmW = parseFloat(document.getElementById('selectTamano').value); 
-                    window.lastProcessedSize = cmW; // Guardamos para el botón de descarga
+                    window.lastProcessedSize = cmW; 
                     
                     const w720 = Math.round((cmW / 2.54) * ppp), fEscala = w720 / imgT.width, h720 = Math.round(imgT.height * fEscala);
                     const cL = document.createElement('canvas'); cL.width = w720; cL.height = h720;
@@ -699,7 +798,6 @@
                     placeholderRIP.style.display = 'none'; imgPreviewRIP.src = cF.toDataURL('image/png'); imgPreviewRIP.style.display = 'block';
                     lblBtnProcess.innerHTML = oldT; btnSemitono.disabled = false; document.getElementById('btnDescargar').disabled = false;
                     
-                    // Actualizar el texto del botón de descarga dinámicamente
                     const t = dict[currentLang];
                     document.getElementById('lblBtnDownload').innerText = `${t.btnDownload} (${window.lastProcessedSize}cm)`;
                 };
@@ -710,31 +808,17 @@
         // 📥 DOWNLOAD
         const btnDescargar = document.getElementById('btnDescargar');
         btnDescargar.addEventListener('click', () => {
-            if (!window.canvasExportacionHD) return;
-            if (trialExpired) {
-                const nag = document.getElementById('nag-overlay'); const btnW = document.getElementById('btn-wait-download');
-                nag.style.display = 'flex'; let time = 20; btnW.disabled = true;
-                const count = setInterval(() => {
-                    time--; document.getElementById('nag-timer').innerText = time;
-                    if (time <= 0) { clearInterval(count); btnW.disabled = false; btnW.style.background = 'transparent'; btnW.style.color = '#ccc'; btnW.innerHTML = '📥 Continuar Descarga Lenta'; }
-                }, 1000);
-                btnW.onclick = () => { nag.style.display = 'none'; executeDl(); }; return;
-            }
-            executeDl();
-        });
-
-        function executeDl() {
+            if (!window.canvasExportacionHD || isBlocked) return;
             const oldT = document.getElementById('lblBtnDownload').innerHTML; document.getElementById('lblBtnDownload').innerHTML = '⏳...'; btnDescargar.disabled = true;
             setTimeout(() => {
                 const link = document.createElement('a'); 
                 const modoTrama = document.getElementById('selectModoTrama').value;
-                // Agregamos la medida procesada al nombre del archivo
                 link.download = `JCDTF_Trama_${modoTrama.toUpperCase()}_${window.lastProcessedSize}cm_720ppp.png`; 
                 link.href = window.canvasExportacionHD.toDataURL('image/png');
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
                 document.getElementById('lblBtnDownload').innerHTML = oldT; btnDescargar.disabled = false;
             }, 100);
-        }
+        });
 
         // UTILS
         function rgbToHsl(r, g, b) { r/=255; g/=255; b/=255; let max=Math.max(r,g,b), min=Math.min(r,g,b), h, s, l=(max+min)/2; if(max===min) h=s=0; else { let d=max-min; s=l>0.5?d/(2-max-min):d/(max+min); switch(max){ case r:h=(g-b)/d+(g<b?6:0);break; case g:h=(b-r)/d+2;break; case b:h=(r-g)/d+4;break; } h/=6; } return [h,s,l]; }
